@@ -26,8 +26,8 @@ gro_var_input <- filters %>% distinct(group_by_filter) # Imports filters to sele
 mat_input <- filters %>% distinct(master_table) # Import SQL tables to select
 jon_input <- filters %>% distinct(joined_table) # Import the tables a user wants to join-on
 ind_input <- indicators %>% select(indicator) # Import indicators (like starts, achievements) to select
-sub_tot_var <- filters %>% distinct(sub_total_filter) # Import filters names without the "MT." prefix
-sub_tot_ind <- indicators %>% distinct(sub_total_indicator) # Import indicator names without the "MT." prefix
+sub_tot_var <- filters %>% distinct(sub_total_filter) # Import filters names without the "ST." prefix
+sub_tot_ind <- indicators %>% distinct(sub_total_indicator) # Import indicator names without the "ST." prefix
 
 # Connect to SQL ----
 conn1 <- DBI::dbConnect(odbc(), .connection_string =  'driver={SQL Server};  server=<name-of-server>;
@@ -53,7 +53,7 @@ selectInput("sql_table", label = "Select the SQL Table:",
 
 ```{r}
 selectInput("year", label = "Select the Year:",
-            choices = c("202021", "201920", "201819", "201718", "201617", "201516". "201415"), 
+            choices = c("202021", "201920", "201819", "201718", "201617", "201516", "201415"), 
             multiple = T, 
             selected = c("202021"))
 ```
@@ -357,7 +357,7 @@ non_tidy_round_value <- eventReactive(input$non_tidy_round, {if(input$non_tidy_r
 # A user can download this query, copy and paste it, or download the data it generates within the UI
 
 non_tidy_data <- eventReactive(input$run, { # This function is only run when the user clicks on the "run" actionButton
-  data <- DBI::dbGetQuery(conn1, 
+  data <- DBI::dbGetQuery(conn1, # Take the values a user selects in the selectInputs and pass it to a SQL query
     paste(
       "SELECT ", 
       filter_input(), ",", indicator_input(), " FROM ", input$sql_table, join_table_input(), 
@@ -426,6 +426,7 @@ tidy_data <- eventReactive(input$run, { # This function is only run when the use
   
   if(isTRUE(input$perc_chng)) {
     
+    # Caculate percentange year-on-year changes
     data <- data %>% 
       mutate(across(last_col():(length(data)-(ind_len-1)), ~(.x/data.table::shift(.x, n = length(row.names.data.frame(data))/length(unique(data$year)))-1)*100, .names = "{col}_percent_change"))
     
@@ -758,7 +759,7 @@ meta_data <- eventReactive(input$run, {
   
   data <- data %>% 
     mutate(indicator_unit = case_when(
-      str_detect(col_name, "_percent") ~ "%",
+      str_detect(col_name, "_percent") ~ "%", # If an indicator has a '_percent' suffix, insert the '%' symbolm into the indicator_unit column
       TRUE ~ ""
     ))
   
@@ -811,6 +812,7 @@ renderPrint(
         "order by ", group_filter_input(),
         sep = "\n"
 )
+)
 ```
 
 ### Download your query
@@ -856,38 +858,36 @@ To operate this tool, __READ THE INSTRUCTIONS BELOW:__
 
 1. In sequential order, select the data you want to return:
     
-    1. First, select the _Master Table (MT)_ you want to return from in the _Master Table_ drop down menu. 
+    1. First, select the _SQL Table (ST)_ you want to return from in the _SQL Table_ drop down menu. 
     
-    2. Now pick the years you want final-year data from in the _Final year data_ menu. If you don't want Final year data from any years, leave this blank.
+    2. Now pick the years you want data from in the _Years_ menu. 
     
-    3. Then pick the year you want in-year data for in the _In-year data_ menu, followed by the ILR snapshots you want in the _In-year snapshot_ menu. If you don't want to In-year data from any years, leave the _In-year data_ and _In-year snapshot_ menus blank.
+    3. Choose the geographical level of the data you want (e.g. at a National level of all of England, at a Regional Level, at Local Authority level etc) in the _Geographic_ level. You can only pick one. The default is set to National. Once you pick a different one, you need to select that geographic level's name and code as a Filter. E.g. if you select _Regional_, you need to select _region_name_ and _region_code_. 
     
-    4. Choose the geographical level of the data you want (e.g. at a National level of all of England, at a Regional Level, at Local Authority level etc) in the _Geographic_ level. You can only pick one. The default is set to National. Once you pick a different one, you need to select that geographic level's name and code as a Filter. E.g. if you select _Regional_, you need to select _region_name_ and _region_code_. 
+    4. Specify the filters you want returned in the _Filters_ menu. __Always keep ST.year selected.__ The choice of filters will be determined by the ST you choose in `Step 1`. Ones with a `ST` prefix are from the Master Table. Ones with a different prefix (e.g. `dGeo`) come from a table you need to join on in `Step 2`. __If you select a Filter with a different prefix to ST., select the SQL table (with the prefix of the filter you choose) in Step 5 below.__
     
-    5. Specify the filters you want returned in the _Filters_ menu. __Always keep ST.year selected.__ The choice of filters will be determined by the MT you choose in `Step 1`. Ones with a `MT` prefix are from the Master Table. Ones with a different prefix (e.g. `dGeo`) come from a table you need to join on in `Step 2`. __If you select a Filter with a different prefix to MT., select the SQL table (with the prefix of the filter you choose) in Step 6 below.__
-    
-    6. Now select any tables you want to join onto your MT in the _Join Tables_ menu. If you only selected Filters with a `MT.` prefix in Step 5, leave it blank. To determine what Table you need to join, look at the prefixes of all the filters you selected in Step 5. Add the Tables that have this prefix in their Table Join. E.g. if you select `dGeo2.SCD2_region_SFR AS region_name`, look for a Table Join with `dGeo2`. In this case it's `INNER JOIN DWH_PL.DART.DIM_Provider dProv ON MT.Provider_SK = dProv.Provider_SK INNER JOIN DWH_PL.DART.DIM_Geography_V2 dGeo2 WITH (NOLOCK) ON dProv.Provider_PostCode_SK = dGeo2.Geography_SK and dgeo2.Flag_Latest=1`
+    5. Now select any tables you want to join onto your ST in the _Join Tables_ menu. If you only selected Filters with a `ST.` prefix in Step 4, leave it blank. To determine what Table you need to join, look at the prefixes of all the filters you selected in Step 4. Add the Tables that have this prefix in their Table Join. E.g. if you select `dGeo2.SCD2_region_SFR AS region_name`, look for a Table Join with `dGeo2`. In this case it's `INNER JOIN DWH_PL.DART.DIM_Provider dProv ON ST.Provider_SK = dProv.Provider_SK INNER JOIN DWH_PL.DART.DIM_Geography_V2 dGeo2 WITH (NOLOCK) ON dProv.Provider_PostCode_SK = dGeo2.Geography_SK and dgeo2.Flag_Latest=1`
   
-    7. Specify these filters again in the _Group By Filters_ menu. You need to add these again because some variables use alias. Adding variables with an alias to a SQL query is not allowed.
+    6. Specify these filters again in the _Group By Filters_ menu. You need to add these again because some variables use alias. Adding variables with an alias to a SQL query is not allowed.
     
-    8. Decide on the Indicators you want to return (Starts, Achievements etc) in the _Indicators_ menu. __You need to select at least one.__
+    7. Decide on the Indicators you want to return (Starts, Achievements etc) in the _Indicators_ menu. __You need to select at least one.__
     
-    9. If you need to add any where statements to the query, place it in the _Where_ text box. Start all your where statements with `AND`, followed by the statement
+    8. If you need to add any where statements to the query, place it in the _Where_ text box. Start all your where statements with `AND`, followed by the statement
     
-    10. Determine the Filters and Indicators you want sub-totals under the _Totals_ menu. __You need to select at least one filter AND indicator__ in each menu. __Always keep year selected as a filter to sub-total on.__
+    9. Determine the Filters and Indicators you want sub-totals under the _Totals_ menu. __You need to select at least one filter AND indicator__ in each menu. __Always keep year selected as a filter to sub-total on.__
     
-    11. If you want columns showing the percentage of each indicator you choose, click the _Percentages?_ button. If you selected the _Year on Year Percentage Changes?_ button below, clicking this one will unselect it.
+    10. If you want columns showing the percentage of each indicator you choose, click the _Percentages?_ button. If you selected the _Year on Year Percentage Changes?_ button below, clicking this one will unselect it.
     
-    12. If, instead, you want to show the year-on-year percentage change for the indicators you choose, click the _Year on Year Percentage Changes?_ button. Selecting this will unselect the _Percentages?_ button if it were selected.
+    11. If, instead, you want to show the year-on-year percentage change for the indicators you choose, click the _Year on Year Percentage Changes?_ button. Selecting this will unselect the _Percentages?_ button if it were selected.
     
-    13. Clarify the Rounding you want performed on the Tidy data by selecting it in the _Rounding?_ menu. The default is set to None. 
+    12. Clarify the Rounding you want performed on the Tidy data by selecting it in the _Rounding?_ menu. The default is set to None. 
 
 2. Once you've selected all those parameters, click `Run your query`. A progress bar will appear in the bottom right of the screen. Wait until it finishes.
 3. When you clicked `Run your query`, your selections were passed to a SQL query, which started to run.  
 4. Once the progress bar is finished, `Tidy Data` will appear in the _Explore your data_ pane. Explore it here. 
 5. This data can be downloaded as a csv in the _Download your tidy data_ pane.
 6. The Metadata file you need for EES can be downloaded in the _Download your Metadata File_ pane. The names, column types, and labels for the filters and labels you select will automatically generate. But, the _indicator_grouping, indicator_dp, filter_hint_, and _filter_grouping_column_ columns will not be generated. _If they need completed, you need to fill them in yourself._ For more information about what should go in these columns, open a browser on the DfE network and go to [the Explore Education Statistics guidance.](https://rsconnect/rsc/stats-production-guidance/ud.html#mandatory_ees_metadata_columns)
-7. The raw data - `Non-Tidy Data` - the SQL queryreturns can be downloaded as a csv in the _Download your non-tidy data_ pane. This can be used for PowerBI dashboards and underlying datasets
+7. The raw data - `Non-Tidy Data` - the SQL query returns can be downloaded as a csv in the _Download your non-tidy data_ pane. This can be used for PowerBI dashboards and underlying datasets
 8. The raw query that returns this data can be copied and pasted in the _View your query_ pane.
 9. Whilst this same query can be downloaded as a text file in the _Download your query_ pane.
 
@@ -895,13 +895,13 @@ To operate this tool, __READ THE INSTRUCTIONS BELOW:__
 
 Version 1.0
 <br>Generated `r format(Sys.time(), "%d %B %Y")`
-<br>Developed by [David Sands](mailto:david.Sands@education.gov.uk)
+<br>Developed by [<name-of-analyst>](mailto:<name-of-analyst>@education.gov.uk)
 
 
 #### Technical notes
 
 * Coded with [R](https://www.r-project.org/) (4.0.3) in [RStudio]((https://www.rstudio.com/)) (1.2.1335)
-* Package Managed with [renv](https://rstudio.github.io/renv/) 0.11.0
+* Package Managed with [renv](https://rstudio.github.io/renv/) 0.12.5
 * Version controlled using [Git](https://git-scm.com/)
 * Table with [DT](https://rstudio.github.io/DT/)
 * Layout with [Flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/)
