@@ -1,0 +1,908 @@
+---
+title: "Explore Education Sttistics User Interface"
+author: "David Sands"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cerulean
+    source_code: embed
+runtime: shiny 
+---
+
+
+```{r setup, include=FALSE}
+
+library(DT) # for interactive HTML tables
+library(DBI) # for SQL connection
+library(odbc) # also for SQL connection
+library(dplyr) # for data manipulation
+library(readxl) # for reading in `filters-and-measure.xlsx`
+library(stringr) # for filtering Total out of the Filters for sub-total calculations
+
+filters <- readxl::read_xlsx("inputs/filters-and-indicators.xlsx", sheet = "filters") # Import the names of filters for each Master Table
+indicators <- readxl::read_xlsx("inputs/filters-and-indicators.xlsx", sheet = "indicators") # Import the names of indicators for each Master Table
+
+var_input <- filters %>% distinct(filter) # Imports filters to select
+gro_var_input <- filters %>% distinct(group_by_filter) # Imports filters to select
+mat_input <- filters %>% distinct(master_table) # Import SQL tables to select
+jon_input <- filters %>% distinct(joined_table) # Import the tables a user wants to join-on
+ind_input <- indicators %>% select(indicator) # Import indicators (like starts, achievements) to select
+sub_tot_var <- filters %>% distinct(sub_total_filter) # Import filters names without the "MT." prefix
+sub_tot_ind <- indicators %>% distinct(sub_total_indicator) # Import indicator names without the "MT." prefix
+
+# Connect to SQL ----
+conn1 <- DBI::dbConnect(odbc(), .connection_string =  'driver={SQL Server};  server=<name-of-server>;
+database=<name-of-database>; trusted_connection=true') # Connect to SQL server
+```
+
+Explore Education Statistics User Interface
+==================
+
+Inputs {data-width=350 .sidebar} 
+-------------------------------------
+
+### Selection Filters
+
+### SQL Table
+
+```{r}
+selectInput("sql_table", label = "Select the SQL Table:",
+            choices = mat_input) # Drop-down menu to select a SQL Table. Only one can be selected
+```
+
+### Years
+
+```{r}
+selectInput("year", label = "Select the Year:",
+            choices = c("202021", "201920", "201819", "201718", "201617", "201516". "201415"), 
+            multiple = T, 
+            selected = c("202021"))
+```
+
+### Geographic
+
+```{r}
+selectInput("geo", label = "Select the Geographic level you want:",
+            choices = c("National", "Regional", "Local authority district", "Local authority", "Parliamentary constituency", "Local enterprise partnership", "Mayoral combined authority")) # All geographic areas that are in the EES Geo guidance AND the SQL Tables
+```
+
+### Filters
+
+```{r}
+selectInput(
+  "filter",
+  label = "Select the filters:", 
+  choices = var_input,
+  multiple = T, 
+  selected = c("ST.year") # Set ST.Year to always be in the sleection
+)
+
+observeEvent(input$sql_table, { # Update the list of filters based on the SQL Table a user selects
+  var <- 
+  filters %>% 
+  filter(
+    master_table == input$sql_table # 'input$sql_table' is the selection a user makes in the "sql_table" select input.
+  )
+
+
+updateSelectInput(session, 
+                  "filter", label = "Select the Filters:",
+                  selected = c("ST.year"), 
+            choices = c(unique(var$filter)
+            )
+)
+}
+)
+```
+
+### Join Tables
+
+```{r}
+selectInput("join_tables", label = "Select Tables to join to the SQL Table:",
+            choices = jon_input, 
+            multiple = T)
+
+observeEvent(input$sql_table, { # Update the list of tables to join based on the SQL Table a user selects
+  var <- 
+  filters %>% 
+  filter(
+    master_table == input$sql_table, # 'input$sql_table' is the selection a user makes in the "sql_table" select input. This comma is the same as 'and'
+    joined_table != "NA" # Remove duplicated SQL Table filters
+  )
+
+
+updateSelectInput(session, 
+                  "join_tables", label = "Select Tables to join to the SQL Table:",
+            choices = unique(var$joined_table) # Update the choices argument with the SQL table selected (input$sql_table)
+            
+)
+}
+)
+```
+
+### Group By Filters
+
+```{r}
+selectInput(
+  "group_filter",
+  label = "Select the filters to group by:", 
+  choices = gro_var_input,
+  multiple = T, 
+  selected = c("ST.year") # Set ST.year to always be in the sleection
+)
+
+observeEvent(input$filter, { # Update the list of filters based on the SQL Table a user selects
+  gro_var <- 
+  filters %>% 
+  filter(
+    master_table == input$sql_table,
+    filter %in% input$filter # Only show filters that a user selects in the `filter` dropdown
+  )
+
+
+updateSelectInput(session, 
+                  "group_filter", label = "Select the filters to group by:",
+                  selected = c("ST.year"), 
+            choices = c(unique(gro_var$group_by_filter)
+            )
+)
+}
+)
+```
+
+### Indicators
+
+```{r}
+selectInput("indicator", label = "Select the indicator(s):",
+            choices = ind_input, 
+            multiple = T)
+
+observeEvent(input$sql_table, { # Update the list of filters based on the SQL Table a user selects
+  var <- 
+  indicators %>% 
+  filter(
+    master_table == input$sql_table
+  )
+
+
+updateSelectInput(session, 
+                  "indicator", label = "Select the indicator:",
+            choices = unique(var$indicator)
+)
+}
+)
+```
+
+### Where
+
+```{r}
+textAreaInput("where", label = "Type in any WHERE statements you need", 
+          value = "", height = '100px', 
+          placeholder = "Type AND, then your WHERE statement(s)") # If a user needs to add a WHERE statement into the query, it goes here.
+```
+
+### Totals
+
+```{r}
+selectInput("sub_total_var", label = "Select the filters you want to sub-total:",
+            choices = sub_tot_var,
+            multiple = T, 
+            selected = c("year")
+)
+
+observeEvent(input$filter, {
+  sub_tot_01 <- 
+    filters %>% 
+    filter(
+      filter %in% input$filter   # Is filter in the filters selected by the user?
+    )
+  
+  updateSelectInput(session,
+                    "sub_total_var", label = "Select the filters you want to sub-total:",
+                    selected = c("year"),
+                    choices = c(unique(sub_tot_01$sub_total_filter)
+                    )
+  )
+})
+```
+
+
+```{r}
+selectInput("sub_total_ind", label = "Select the indicator you want to sub-total:",
+            choices = sub_tot_ind, 
+            multiple = T
+)
+
+observeEvent(input$indicator, {
+  sub_tot_02 <- 
+    indicators %>% 
+    filter(
+      indicator %in% input$indicator # Is indicator in the indicators selected by the user?
+    )
+  
+  updateSelectInput(session,
+                    "sub_total_ind", label = "Select the indicator you want to sub-total:",
+                    choices = c(unique(sub_tot_02$sub_total_indicator)
+                    )
+  )
+})
+```
+
+### Percentages?
+
+```{r}
+checkboxInput("perc", label = "Do you want percentages for your indicator(s)? If yes, click this box.") # If ticked, percentage code in {r Create tidy data} is activated. If not, the code is skipped.
+
+observeEvent(input$perc_chng, { # If the yoy percentage box is ticked, this code unticks this box
+  
+  if(isTRUE(input$perc_chng)){
+  updateCheckboxInput(session, 
+                      "perc", 
+                      value = FALSE)
+  }
+})
+```
+
+### Year on Year Percentage Changes?
+
+```{r}
+checkboxInput("perc_chng", label = "Do you want year-on-year percentage changes for the indicator(s)? If yes, click this box")
+# If ticked, code to calculate the year-on-year percentage change in {r Create tidy data} is activated. If not, the code is skipped.
+
+observeEvent(input$perc, { # If the perc percentage box is ticked, this code unticks this box
+  
+  if(isTRUE(input$perc)){
+  updateCheckboxInput(session, 
+                      "perc_chng", 
+                      value = FALSE)
+}
+})
+```
+
+### Rounding?
+
+```{r}
+selectInput("round", label = "What level of rounding do you want for the indicator(s)?", 
+             choices = c("None", "Nearest ten", "Nearest hundred", "Sub-totals to the nearest ten, and totals to the nearest hundred")) # None generates no rounding. Any other selection will activate if statements in {r Create tidy data}
+```
+
+### Non-Tidy Data Rounding?
+
+```{r}
+selectInput("non_tidy_round", label = "What level of rounding do you want for the non-tidy data? If you don't want to round this data, DO NOT SELECT this dropdown.", 
+            choices = c("None", "Nearest ten", "Nearest hundred"))
+# None generates no rounding. Any other selection will activate if statements in {r Create non-tidy data}
+```
+
+### Run
+
+```{r}
+actionButton("run", label = "Run your query.") # Creates a button in the UI
+```
+
+Process {data-width=850 .tabset .tabset-fade}
+-------------------------------------
+
+```{r Set input values}
+filter_input <- renderText(expr = input$filter, sep = ", ") # Take the filters a user selects in input$filter and displays the value. This populates the SQL query below
+
+group_filter_input <- renderText(expr = input$group_filter, sep = ", ") # Take the group-by filters a user selects in input$group_filter and displays the value.
+
+indicator_input <- renderText(expr = input$indicator, sep = ", ")  # Take the indicator(s) a user selects in input$filter and displays the value.
+
+year_input <- renderText(expr = input$year, sep = ", ") # Displays the year a user selects for in-year data
+
+join_table_input <- renderText(expr = input$join_tables) # Displays the SQL query joins a user selects in input$join_tables
+
+sub_tot_vector <- reactive(sort(as.vector(input$sub_total_var, mode = "character"), decreasing = T)) # The filters for the cube function are passed to a reactive variable
+
+ind_vector <- reactive(as.vector(input$sub_total_ind, mode = "character")) # The indicators for the cube function are passed to a reactive variable 
+
+var_label_vector <- reactive( # This populates filters in the metadata file. it removes year, geo names, geo codes, ukprn, and provider name
+    as.vector(
+      pull(filters %>% filter(sub_total_filter %in% input$sub_total_var & sub_total_filter != "year" & master_table == input$sql_table) %>%  filter(str_detect(sub_total_filter, 
+                                                                                                                             "[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_code|[regionladlapconlocal_enterprise_partnershipmayoral_combined_authority]_name|ukprn|snapshot", # Regular Expression. The brackets detects any instances of region, lad, pcon, lep, or ca, followed by code or name. The vertical lines are the same as 'OR'. So OR string matches ukprn.
+                                                                                                                             
+                                                                                                                             negate = T) == TRUE) %>% # Only select entries that do not match the criteria above. Entries that do will be filtered-out.
+             arrange(desc(sub_total_filter)) %>% 
+             select(label)),
+      mode = "character")
+)
+
+ind_label_vector <- reactive( # This populates indicators in the metadata file.
+  as.vector(
+    pull(indicators %>% 
+           filter(indicator %in% input$indicator) %>% 
+           select(label)), 
+    mode = "character"
+  )
+)
+
+# Fix R's round function (which rounds down 5 to 0. Weird init? Well, IEC 60559 is weird then: https://www.iso.org/standard/57469.html). Lifted from Isobel Cottam's code from the Destination Measures team.
+
+prop_round = function(x, n) {
+  posneg = sign(x)
+  z = abs(x)*10^n
+  z = z + 0.50000000000001
+  z = trunc(z)
+  z = z/10^n
+  z*posneg 
+}
+
+# Function to return a value to round an indicator with, depending on the level of rounding a user chooses.
+round_value <- eventReactive(input$round, {if(input$round == "Nearest ten"){
+  -1
+} else if (input$round == "Nearest hundred"){
+  -2
+} else {
+  0
+}
+}
+)
+
+# Function to return a value to round non-tidy indicator with, depending on the level of rounding a user chooses.
+non_tidy_round_value <- eventReactive(input$non_tidy_round, {if(input$non_tidy_round == "Nearest ten"){
+  -1
+} else if (input$non_tidy_round == "Nearest hundred"){
+  -2
+} else {
+  0
+}
+}
+)
+
+```
+
+```{r Create non-tidy data}
+# This combines all the user selections into a SQL query. 
+# A user can download this query, copy and paste it, or download the data it generates within the UI
+
+non_tidy_data <- eventReactive(input$run, { # This function is only run when the user clicks on the "run" actionButton
+  data <- DBI::dbGetQuery(conn1, 
+    paste(
+      "SELECT ", 
+      filter_input(), ",", indicator_input(), " FROM ", input$sql_table, join_table_input(), 
+      "where year in (", year_input(), ")",
+      input$where,
+      "group by ", 
+      group_filter_input(),
+    "order by ", group_filter_input()
+    )
+  )
+  
+  ind_len <- length(ind_vector()) # Returns number of indicators a user selected
+  
+    # Round all indicators to either nearest 100, nearest 10, or don't round
+      if(input$non_tidy_round != "None"){
+      data <- data %>% 
+      mutate(
+        across(
+            last_col(ind_len-1):length(data), # Select the numeric indicators
+            ~na_if(.x, 0) # Change zeros to na. 
+        ), 
+        across(
+          last_col(ind_len-1):length(data), prop_round, non_tidy_round_value() # Populate the prop_round function with a non_tidy_round_value() that reflects the rounding a user selects. If a user wanted to round to the nearest 100, the value -2 would go here.
+          )
+      )
+      }
+  
+  else{
+    data <- data
+  }
+    
+    return(data)
+})
+
+
+```
+
+```{r Create tidy data}
+tidy_data <- eventReactive(input$run, { # This function is only run when the user clicks on the "run" actionButton
+  progress <- shiny::Progress$new(session, min=1, max=15) # Progress bar
+  on.exit(progress$close())
+  
+  progress$set(message = 'Calculation in progress',
+               detail = 'Wait! Be patient...')
+  
+  for (i in 1:15) {
+    progress$set(value = i)
+    Sys.sleep(1) # Each number is 15 seconds. The UI waits a minimum of 15 seconds. If the query takes longer, the progress bar will stay at 99%
+  }
+  
+  data <- DBI::dbGetQuery(conn1, 
+    paste(
+      "SELECT ", 
+      filter_input(), ",", indicator_input(), " FROM ", input$sql_table, join_table_input(), 
+      "where year in (", year_input(), ")",
+      input$where,
+      "group by ", 
+      group_filter_input(),
+    "order by ", group_filter_input()
+    )
+  )
+  
+  data[is.na(data)] <- 0 # Replace NAs with Zero (these would sometimes appear in the indicators of the above data)
+  
+  ind_len <- length(ind_vector()) # Returns number of indicators a user selected
+  
+  if(isTRUE(input$perc_chng)) {
+    
+    data <- data %>% 
+      mutate(across(last_col():(length(data)-(ind_len-1)), ~(.x/data.table::shift(.x, n = length(row.names.data.frame(data))/length(unique(data$year)))-1)*100, .names = "{col}_percent_change"))
+    
+    # Last two columns - where the percentage changes are
+    per_ind_vector <- c(names(data)[(length(data)):(length(data)-(ind_len-1))]) # Return the names of indicators with percentage change at the end
+    
+    cube_data <- data.table::cube(data.table::as.data.table(data), j = lapply(.SD, sum), by = sub_tot_vector(), 
+                                  .SDcols = c(ind_vector())) 
+    # Replicates SQL's cube function to sub-total filter. 'by' are the filters we want sub-totals for, while '.SDcols' are the numeric and percentage indicators we're interested in.
+        
+    cube_data <- left_join(cube_data, data) %>% 
+      mutate(across(ends_with("percent_change"), ~tidyr::replace_na(.x, 0.0)))
+    
+    
+    cube_data <- cube_data %>% 
+      relocate(last_col(ind_len-1):(length(cube_data)), .after = where(is.character)) # Move the yoy percentage change column to before the indicator columns. This makes rounding code below easier
+      
+    
+  }
+  
+  else if(isTRUE(input$perc)) {
+
+      
+      non_unknown_perc <- data %>%
+        filter(across(1:(length(data)-ind_len), ~ str_detect(.x, "U|unknown", negate = TRUE) == TRUE)) %>%  # Filter any rows which don't equal either unknown or Unknown. We don't want unknowns in percentage calculations
+        group_by(year) %>% 
+        mutate(across(last_col():(length(data)-ind_len), ~(.x/sum(.x))*100, .names = "{col}_percent")) # Calculate percentages on data that doesn't have unknown in it
+      
+      unknown_perc <- anti_join(data, non_unknown_perc) %>% # Select the data that non_unknown_perc filtered out. I.e. the ones with unknowns in the rows.
+        group_by(year) %>% 
+        mutate(across(last_col():(length(data)-ind_len), ~0, .names = "{col}_percent")) # Assign a percentage of 0 to all rows with unknowns.
+      
+      data <- full_join(non_unknown_perc, unknown_perc) # Bring them back together.
+      
+    # Last two columns - where the percentages are
+    per_ind_vector <- c(names(data)[(length(data)):(length(data)-(ind_len-1))]) # Return the names of indicators with percentage at the end
+    
+    
+    cube_data <- data.table::cube(data.table::as.data.table(data), j = lapply(.SD, sum), by = sub_tot_vector(), 
+                                  .SDcols = c(per_ind_vector, ind_vector())) 
+    # Replicates SQL's cube function to sub-total filter. 'by' are the filters we want sub-totals for, while '.SDcols' are the numeric and percentage indicators we're interested in.
+    
+    
+  }
+else{
+  cube_data <- data.table::cube(data.table::as.data.table(data), j = lapply(.SD, sum), by = sub_tot_vector(), 
+                                           .SDcols = ind_vector()) # Replicates SQL's cube function to sub-total filter. 'by' are the filters we want sub-totals for, while '.SDcols' are the numeric indicators we're interested in.
+  
+}
+  
+  cube_data <- cube_data %>% filter(!is.na(year)) # Remove NAs from Year (we don't want totals per year)
+  
+    cube_data <- cube_data %>% filter(across(matches("[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_code|[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_name|ukprn|snapshot"), ~ str_detect(.x, "Total", negate = T) == TRUE)) # Removes any rows where NAs are in geo codes or geo names, or ukprns. I.e. country code, LA code etc (we don't want totals per geo code nor names)
+  
+  cub_row <- length(row.names.data.frame(cube_data)) # Return the number of rows
+    
+    tidy_data <- cube_data %>%
+      mutate( # Add filters needed for Explore Education Statistics (EES)
+        time_identifier = rep("Academic year", cub_row), # Repeats the "Academic year" string by the number of rows
+        geographic_level = if(input$geo == "National"){ # Various if statements that change geogrpahic_level based on what a user selects in "input$geo". Could probably be refactored into a CASE WHEN
+          rep("National", cub_row)
+          }
+        else if(input$geo == "Regional"){
+          rep("Regional", cub_row)
+        }
+        else if(input$geo == "Local authority district"){
+          rep("Local authority district", cub_row)
+        }
+        else if(input$geo == "Local authority"){
+          rep("Local authority", cub_row)
+        }
+        else if(input$geo == "Parliamentary constituency"){
+          rep("Parliamentary constituency", cub_row)
+        }
+        else if(input$geo == "Local enterprise partnership"){
+          rep("Local enterprise partnership", cub_row)
+        }
+        else {
+          rep("Mayoral combined authority", cub_row)
+        },
+        country_code = rep("E92000001", cub_row),
+        country_name = rep("England", cub_row)) %>% # Add country code and name as standard
+      rename(time_period = year) %>% # Code assumes year will always be picked
+      relocate(time_identifier:country_name, .after = time_period) %>% # Move the above four columns between "time_period" and the filters you've selected
+      arrange(time_period) # Order the data by years
+    
+    if("ukprn" %in% colnames(tidy_data)){
+     tidy_data <- tidy_data %>% mutate(across(matches("ukprn"), as.character)) # Previously, NAs would not be coded as 'Total' because this variable was numeric. Change it to character to stop this. 
+         
+       tidy_data[is.na(tidy_data)] <- "Total" # Replace NAs created from the cube() function with "Total"
+         
+  }
+    else{
+    tidy_data[is.na(tidy_data)] <- "Total" # Replace NAs created from the cube() function with "Total"
+    }
+    
+
+      # Applies rounding coding if a user selected it.
+    if(input$round == "Sub-totals to the nearest ten, and totals to the nearest hundred"){
+      total_data <- tidy_data %>% 
+        filter(across(6:(length(tidy_data)-
+                           if(isTRUE(input$perc)){ind_len*2} # Sees if percentages have been created. If they are, only the numeric indicators are selected, not the percentage ones.
+                         else if(isTRUE(input$perc_chng)){ind_len*2} # Sees if yoy percentage change has been created. If it has, only yhr numeric indicators are select, not the yoy percenmtage change ones
+          else{ind_len}), ~ str_detect(.x, "Total") == TRUE))  # Select rows where all the filters equal "Total"
+        
+      total_data_round <- total_data %>% 
+      mutate(across(last_col(ind_len-1):length(tidy_data), 
+                      ~na_if(.x, 0)
+                      ), 
+               across(last_col(ind_len-1):length(tidy_data), 
+               ~ prop_round(., -2)), 
+               across(
+          last_col(ind_len-1):length(tidy_data), ~tidyr::replace_na(.x, 666666666))
+          ) # Apply rounding to nearest hundred on the indicators
+      
+      sub_total_data <- anti_join(tidy_data, total_data) 
+      
+      sub_total_data <- sub_total_data %>% mutate(across(last_col(ind_len-1):length(sub_total_data), 
+                                                         ~na_if(.x, 0)
+                                                          ),
+                                                  across(last_col(ind_len-1):length(sub_total_data), 
+                                                         ~ prop_round(., -1))) # APply rounding to the nearest 10 on the remaining rows
+        
+       tidy_data <- full_join(sub_total_data, total_data_round) # Join sub-total rows with rounding to nearest 10, and total rows with rounding to nearest 100 together
+      }
+      # Round all indicators to either nearest 100, nearest 10, or don't round
+      else{
+      tidy_data <- tidy_data %>% 
+      mutate(
+        across(
+            last_col(ind_len-1):length(tidy_data), # Select the numeric indicators
+            ~na_if(.x, 0) # Change zeros to na. 
+        ), 
+        across(
+          last_col(ind_len-1):length(tidy_data), prop_round, round_value() # Populate the prop_round function with a round_value() that reflects the rounding a user selects. If a user wanted to round to the nearest 100, the value -2 would go here.
+          ), 
+        across(
+          last_col(ind_len-1):length(tidy_data), ~tidyr::replace_na(.x, 666666666))
+      )
+      }
+    
+    
+    if(isTRUE(input$perc)){
+    tidy_data <- tidy_data %>% 
+        mutate(
+          across(last_col(2*ind_len-1):length(tidy_data), 
+                 ~round(.x, 1)
+          )
+        )
+    }
+    
+    if(isTRUE(input$perc_chng)){
+    tidy_data <- tidy_data %>% 
+        mutate(
+          across(last_col(2*ind_len-1):length(tidy_data), 
+                 ~round(.x, 1)
+          )
+        )
+    }
+    
+    
+    if(input$round != "None"){
+      tidy_data <- tidy_data %>% 
+        mutate(
+          across(if(isTRUE(input$perc)){
+        last_col(2*ind_len-1):length(tidy_data)}
+        
+        else{
+          last_col(ind_len-1):length(tidy_data)
+        },
+        ~na_if(.x, 0)), 
+        
+        across(if(isTRUE(input$perc)){
+        last_col(2*ind_len-1):length(tidy_data)},
+        ~na_if(.x, 0.1)),
+        
+        across(if(isTRUE(input$perc)){
+        last_col(2*ind_len-1):length(tidy_data)},
+        ~na_if(.x, 0.2)),
+        
+        across(if(isTRUE(input$perc)){
+        last_col(2*ind_len-1):length(tidy_data)},
+        ~na_if(.x, 0.3)),
+        
+        across(if(isTRUE(input$perc)){
+        last_col(2*ind_len-1):length(tidy_data)},
+        ~na_if(.x, 0.4)),
+        
+        across(if(isTRUE(input$perc)){
+          last_col(2*ind_len-1):length(tidy_data)}
+          
+          else{
+          last_col(ind_len-1):length(tidy_data)
+        },
+          ~case_when(.x == 666666666 ~ 0,
+                     TRUE ~ .x) # Replace true zeros from a to 0
+        ),
+        
+        across(if(isTRUE(input$perc)){
+          last_col(2*ind_len-1):length(tidy_data)}
+          
+          else{
+          last_col(ind_len-1):length(tidy_data)
+        },
+          ~tidyr::replace_na(.x, "~") # Replace instances where rounded data is 0 to ~
+        )
+        
+        
+      )  
+    }
+    
+    else{
+      tidy_data <- tidy_data %>% 
+        mutate(
+          across(if(isTRUE(input$perc)){
+          last_col(2*ind_len-1):length(tidy_data)}
+          
+          else if (isTRUE(input$perc_chng)){
+          last_col(2*ind_len-1):length(tidy_data)}
+          
+          else{
+          last_col(ind_len-1):length(tidy_data)
+        },
+          ~case_when(.x == 666666666 ~ 0,
+                     TRUE ~ .x) # Replace true zeros from a to 0
+        )
+        )
+    }    
+    
+    return(tidy_data)
+    
+})
+  
+```
+
+```{r Return the tidy data as a DataTable}
+output$query_results <- renderDataTable(
+                            {tidy_data()}, # Show the tidy_data we created above.
+                            rownames = F, # Don't show row names (e.g. 1, 2, 3...)
+                            extensions = c('Buttons', 'FixedColumns'), # Buttons and FixedColumns needs to be activated
+                            options = list(scrollY = '700px',
+                                           dom = 'Blftip', # DOM is a DT parameter that defines what table control                                                             elements: https://datatables.net/reference/option/dom
+                                           # In the example above, I say that I want: 1 - The Buttons; 2 - row length                                                            control; 3 - filtering input; 4 - the actual table; 4 - Table info summary;                                                          and, 5 - page control
+                                           buttons = c('copy', 'csv'), # List of buttons you want with the Data Table
+                                           scrollX = TRUE,
+                                           fixedColumns = TRUE 
+                                           
+                            )
+)
+```
+
+### Explore your tidy data
+
+```{r}
+DT::dataTableOutput("query_results") # Render/show the Data Table
+```
+
+### Download your tidy data
+
+```{r Download your tidy data}
+output$downloadTidyData <- downloadHandler(
+  filename = function() {
+    paste0(Sys.Date(), '_tidy-data.csv') # Name the file as today's date, followed by _tidy-data.csv
+  },
+  content = function(con) {
+    write.csv(tidy_data(), con, row.names = F) # 
+  }
+)
+
+renderUI({
+downloadButton("downloadTidyData", "Download your tidy data")
+})
+```
+
+### Download your Metadata File
+
+```{r Download your Metadata File}
+meta_data <- eventReactive(input$run, {
+  if(isTRUE(input$perc)){
+  data <- data.frame(col_name = c(sub_tot_vector()[-1], ind_vector(), paste0(ind_vector(), "_percent")), # Add _percent suffix to a copy of the indicators you choose. 
+                     col_type = c(
+               rep("Filter", length(sub_tot_vector()[-1])), # Remove year from the metadata
+               rep("Indicator", length(ind_vector())*2))) 
+  
+  data <- data %>% filter(str_detect(col_name, "[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_code|[regionladlapconlocal_enterprise_partnershipmayoral_combined_authority]_name|ukprn|snapshot", negate = T) == TRUE) # Removes any rows where NAs are in geo codes, geo names, or ukprn.
+             
+  data <- data %>% 
+    tibble::add_column( 
+             label = c(var_label_vector(), ind_label_vector(), paste(ind_label_vector(), "Percentage")) # Add labels to each filter and indicator in the metadata file.
+  )
+  
+  }
+  
+  else if(isTRUE(input$perc_chng)){
+  data <- data.frame(col_name = c(sub_tot_vector()[-1], ind_vector(), paste0(ind_vector(), "_percent_change")), # Add _percent suffix to a copy of the indicators you choose. 
+                     col_type = c(
+               rep("Filter", length(sub_tot_vector()[-1])), # Remove year from the metadata
+               rep("Indicator", length(ind_vector())*2))) 
+  
+  data <- data %>% filter(str_detect(col_name, "[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_code|[regionladlapconlocal_enterprise_partnershipmayoral_combined_authority]_name|ukprn|snapshot", negate = T) == TRUE) # Removes any rows where NAs are in geo codes, geo names, or ukprn.
+             
+  data <- data %>% 
+    tibble::add_column( 
+             label = c(var_label_vector(), ind_label_vector(), paste(ind_label_vector(), "Percentage Change")) # Add labels to each filter and indicator in the metadata file.
+  )
+  
+  }
+  
+  else{
+    data <- data.frame(col_name = c(sub_tot_vector()[-1], ind_vector()), 
+                       col_type = c(
+             rep("Filter", length(sub_tot_vector()[-1])),
+             rep("Indicator", length(ind_vector())))
+    )
+                       
+    data <- data %>% filter(str_detect(col_name, "[regionladnew_lapconlocal_enterprise_partnershipmayoral_combined_authority]_code|[regionladlapconlocal_enterprise_partnershipmayoral_combined_authority]_name|ukprn|snapshot", negate = T) == TRUE)                  
+             
+    data <- data %>% 
+      tibble::add_column(
+             label = c(var_label_vector(), ind_label_vector())
+    )
+  }
+  
+  data <- data %>% 
+    tibble::add_column(indicator_grouping = vector(mode = "character", length(data[[1]])), 
+                       indicator_unit = vector(mode = "character", length(data[[1]])), 
+                       indicator_dp = vector(mode = "character", length(data[[1]])),
+                       filter_hint = vector(mode = "character", length(data[[1]])), 
+                       filter_grouping_column = vector(mode = "character", length(data[[1]]))) # Add other columns needed for metadata file. As at 02/10/2020, an anlysts would need to fill thees columns manually
+  
+  data <- data %>% 
+    mutate(indicator_unit = case_when(
+      str_detect(col_name, "_percent") ~ "%",
+      TRUE ~ ""
+    ))
+  
+  return(data)
+  
+})
+
+output$downloadMetaData <- downloadHandler(
+  filename = function() {
+    paste0(Sys.Date(), '_tidy-data.meta.csv') # Name the file as today's date, followed by _tidy-data.csv
+  },
+  content = function(con) {
+    write.csv(meta_data(), con, row.names = F) # 
+  }
+)
+
+renderUI({
+downloadButton("downloadMetaData", "Download your Metadata File")
+})
+```
+
+### Download your non-tidy data
+
+```{r Download your non-tidy data}
+output$downloadNonTidyData <- downloadHandler(
+  filename = function() {
+    paste0(Sys.Date(), '_non-tidy-data.csv')
+  },
+  content = function(con) {
+    write.csv(non_tidy_data(), con, row.names = F)
+  }
+)
+
+renderUI({
+downloadButton("downloadNonTidyData", "Download your non-tidy data")
+})
+```
+
+### View your query
+
+```{r View your query}
+renderPrint(
+    cat("USE <database-name>",
+        "SELECT ", 
+        filter_input(), ",", indicator_input(), " FROM ", input$sql_table, join_table_input(), 
+        "where year in (", year_input(), ")",
+        input$where,
+        "group by ", 
+        group_filter_input(), 
+        "order by ", group_filter_input(),
+        sep = "\n"
+)
+```
+
+### Download your query
+
+```{r Download your query}
+output$downloadQuery <- downloadHandler(
+  filename = function() {
+    paste0(Sys.Date(), '_query.txt')
+  },
+  content = function(con) {
+    writeLines(
+      
+        paste("USE <database-name>", 
+              "SELECT ",
+              filter_input(), ",", indicator_input(), 
+              " FROM ", input$sql_table, join_table_input(),
+              " where year in (", year_input(), ")",
+              input$where, 
+              "group by ",
+              group_filter_input(), 
+              "order by ", group_filter_input(),
+              sep = "\n"
+        )
+    , con)
+  }
+)
+
+renderUI({
+  downloadButton("downloadQuery", "Download your query")
+})
+```
+
+Column {data-width=300 .tabset .tabset-fade}
+-------------------------------------
+
+### User Guide
+
+By selecting the tables, filters, and indicators you want, this tool returns `Tidy Data` for import to _Explore Education Statistics_, and `Non-Tidy Data` for use in PowerBI dashboards and general analytical use. You can download the `Tidy` and `Non-Tidy` data you produce (as a csv file), explore the `Tidy data`, view the SQL query that returned your `Non-Tidy Data`, and download the same SQL (as a text file). 
+
+To operate this tool, __READ THE INSTRUCTIONS BELOW:__
+
+#### How to use
+
+1. In sequential order, select the data you want to return:
+    
+    1. First, select the _Master Table (MT)_ you want to return from in the _Master Table_ drop down menu. 
+    
+    2. Now pick the years you want final-year data from in the _Final year data_ menu. If you don't want Final year data from any years, leave this blank.
+    
+    3. Then pick the year you want in-year data for in the _In-year data_ menu, followed by the ILR snapshots you want in the _In-year snapshot_ menu. If you don't want to In-year data from any years, leave the _In-year data_ and _In-year snapshot_ menus blank.
+    
+    4. Choose the geographical level of the data you want (e.g. at a National level of all of England, at a Regional Level, at Local Authority level etc) in the _Geographic_ level. You can only pick one. The default is set to National. Once you pick a different one, you need to select that geographic level's name and code as a Filter. E.g. if you select _Regional_, you need to select _region_name_ and _region_code_. 
+    
+    5. Specify the filters you want returned in the _Filters_ menu. __Always keep ST.year selected.__ The choice of filters will be determined by the MT you choose in `Step 1`. Ones with a `MT` prefix are from the Master Table. Ones with a different prefix (e.g. `dGeo`) come from a table you need to join on in `Step 2`. __If you select a Filter with a different prefix to MT., select the SQL table (with the prefix of the filter you choose) in Step 6 below.__
+    
+    6. Now select any tables you want to join onto your MT in the _Join Tables_ menu. If you only selected Filters with a `MT.` prefix in Step 5, leave it blank. To determine what Table you need to join, look at the prefixes of all the filters you selected in Step 5. Add the Tables that have this prefix in their Table Join. E.g. if you select `dGeo2.SCD2_region_SFR AS region_name`, look for a Table Join with `dGeo2`. In this case it's `INNER JOIN DWH_PL.DART.DIM_Provider dProv ON MT.Provider_SK = dProv.Provider_SK INNER JOIN DWH_PL.DART.DIM_Geography_V2 dGeo2 WITH (NOLOCK) ON dProv.Provider_PostCode_SK = dGeo2.Geography_SK and dgeo2.Flag_Latest=1`
+  
+    7. Specify these filters again in the _Group By Filters_ menu. You need to add these again because some variables use alias. Adding variables with an alias to a SQL query is not allowed.
+    
+    8. Decide on the Indicators you want to return (Starts, Achievements etc) in the _Indicators_ menu. __You need to select at least one.__
+    
+    9. If you need to add any where statements to the query, place it in the _Where_ text box. Start all your where statements with `AND`, followed by the statement
+    
+    10. Determine the Filters and Indicators you want sub-totals under the _Totals_ menu. __You need to select at least one filter AND indicator__ in each menu. __Always keep year selected as a filter to sub-total on.__
+    
+    11. If you want columns showing the percentage of each indicator you choose, click the _Percentages?_ button. If you selected the _Year on Year Percentage Changes?_ button below, clicking this one will unselect it.
+    
+    12. If, instead, you want to show the year-on-year percentage change for the indicators you choose, click the _Year on Year Percentage Changes?_ button. Selecting this will unselect the _Percentages?_ button if it were selected.
+    
+    13. Clarify the Rounding you want performed on the Tidy data by selecting it in the _Rounding?_ menu. The default is set to None. 
+
+2. Once you've selected all those parameters, click `Run your query`. A progress bar will appear in the bottom right of the screen. Wait until it finishes.
+3. When you clicked `Run your query`, your selections were passed to a SQL query, which started to run.  
+4. Once the progress bar is finished, `Tidy Data` will appear in the _Explore your data_ pane. Explore it here. 
+5. This data can be downloaded as a csv in the _Download your tidy data_ pane.
+6. The Metadata file you need for EES can be downloaded in the _Download your Metadata File_ pane. The names, column types, and labels for the filters and labels you select will automatically generate. But, the _indicator_grouping, indicator_dp, filter_hint_, and _filter_grouping_column_ columns will not be generated. _If they need completed, you need to fill them in yourself._ For more information about what should go in these columns, open a browser on the DfE network and go to [the Explore Education Statistics guidance.](https://rsconnect/rsc/stats-production-guidance/ud.html#mandatory_ees_metadata_columns)
+7. The raw data - `Non-Tidy Data` - the SQL queryreturns can be downloaded as a csv in the _Download your non-tidy data_ pane. This can be used for PowerBI dashboards and underlying datasets
+8. The raw query that returns this data can be copied and pasted in the _View your query_ pane.
+9. Whilst this same query can be downloaded as a text file in the _Download your query_ pane.
+
+#### Version details
+
+Version 1.0
+<br>Generated `r format(Sys.time(), "%d %B %Y")`
+<br>Developed by [David Sands](mailto:david.Sands@education.gov.uk)
+
+
+#### Technical notes
+
+* Coded with [R](https://www.r-project.org/) (4.0.3) in [RStudio]((https://www.rstudio.com/)) (1.2.1335)
+* Package Managed with [renv](https://rstudio.github.io/renv/) 0.11.0
+* Version controlled using [Git](https://git-scm.com/)
+* Table with [DT](https://rstudio.github.io/DT/)
+* Layout with [Flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/)
+* Use Microsoft Edge, Google Chrome, or Forefox Focus to open this dashboard. **DO NOT USE INTERNET EXPLORER**
