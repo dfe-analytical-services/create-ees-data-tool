@@ -419,9 +419,26 @@ pre code {
 <h1>How to run the UI <a class="anchor" id="tag3"></a></h1>
 <p>To run the UI, follow these steps:</p>
 <ol style="list-style-type: decimal">
+<li><p>Open the <code>inputs\filters-and-indicators.xlsx</code> Excel file and go to the <em>filters</em> sheet. The information in this populates SQL queries that the UI runs to return data for an EESIF. Using the dummy examples in that sheet, enter the:</p>
+<ol style="list-style-type: decimal">
+<li>Filters - the names of the variables you use from your SQL Table</li>
+<li>Their group by names. I.e. if you have a filter like <code>ST.filter_1 as alias_1</code>, you would enter the string <code>ST.filter_1</code> here</li>
+<li>Their sub-total names needed by the UI. I.e. if you have a filter like <code>ST.filter_1 as alias_1</code>, you would enter the string <code>ST.alias_1</code> here. If a filter does not use an alias, just enter the name of your filter.</li>
+<li>The name of the SQL table this filter comes from, given the alias <code>ST</code></li>
+<li>If a filter comes from a table you join onto, enter it; and,</li>
+<li>The label you want for your filters in the metadata file</li>
+</ol></li>
+<li><p>Go to the <em>indicators</em> sheet. Like filters, this information is also used in the SQL queries the UI runs. Using the dummy examples in that sheet, enter the:</p>
+<ol style="list-style-type: decimal">
+<li>Indicators - the names of the measure you report on from your SQL Table. Should always be in the SQL format of an aggregate variable (sum or count).</li>
+<li>Their sub-total names needed by the UI. I.e. if you have an indiactor like <code>sum(ST.indicator_1) as indicator_1</code>, you would enter the string <code>indicator_1</code> here</li>
+<li>The name of the SQL table this filter comes from, given the alias <code>ST</code></li>
+<li>The label you want for your indicators in the metadata file</li>
+</ol></li>
+<li><p>Save the file and close it.</p></li>
 <li><p>Open the R project <code>ees-user-interface.Rroj</code>. You need this because I’ve saved the R Package versions used in the UI within a sub-folder - <code>renv</code> - of the project.</p></li>
 <li><p><strong>Do not update R Packages after you’ve opened the R project</strong>.</p></li>
-<li><p>Make sure you’re using <code>R version 4.0.3 (2020-10-10)</code> or later. I built and tested the UI in this version. If you don’t, download it <a href="https://cran.r-project.org/bin/windows/base/">here.</a> After it downloads, install it by double-clicking on the <code>R-4.0.3-win</code> file in your <em>Downloads</em> folder.</p></li>
+<li><p>If you can, use <code>R version 4.0.3 (2020-10-10)</code> or later. I built and tested the UI in this version. If you’re on the ESFA Remote Desktop, download the latest version of R <a href="https://cran.r-project.org/bin/windows/base/">here.</a> After it downloads, install it by double-clicking on the <code>R-4.0.3-win</code> file in your <em>Downloads</em> folder. If you’re on the DfE Network, download the latest version of R from the <em>Software Centre</em><a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p></li>
 <li><p>Open <code>user-interface.Rmd</code> in RStudio.</p></li>
 <li><p>Click on <em>Run Document</em> at the top of that file, or press <code>Ctrl + Shift + K</code></p></li>
 <li><p>The UI will either appear in the <em>Viewer</em> pane on the bottom right-hand side of RStudio, or as a separate window.</p></li>
@@ -515,6 +532,12 @@ pre code {
 <p>And finally, <em>Download your query</em> allows you to download the same query as a text file called <code>&lt;current-data-YYYY-MM-DD&gt;_query.txt</code></p>
 </div>
 </div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>and pray<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
 </div>
 
 
