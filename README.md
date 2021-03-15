@@ -10,6 +10,7 @@
 4. [How does the UI work?](#tag5)
     1. [Summary](#tag6)
     2. [Detailed Explanation](#tag7)
+5. [Common Problems](#tag8)
     
 # Introduction <a class="anchor" id = "tag1"></a>
     
@@ -182,3 +183,12 @@ _Download your non-tidy data_ returns the non-tidy data you generated in a CSV f
 _View your query_ shows the SQL query that the UI runs from a `renderPrint` function. 
 
 And finally, _Download your query_ allows you to download the same query as a text file called `<current-data-YYYY-MM-DD>_query.txt`
+
+# Common Problems <a class="anchor" id = "tag8"></a>
+
+Whilst deploying the UI to the DISD FE unit, these problems arose intermittently. Both of them were due to incorrect usage of R projects and the saved packages in the `renv` folder:
+
+Error | Cause | Solution
+----- | ---- | ----
+A text box appears in RStudio asking you to install R packages. E.g. _Running Flexdashboard requires installation of updated versions of these packages. Do you want to install now?_ | Not using the `user-interface.Rproj` R project to run the UI | Open the `user-interface.Rproj` R project in RStudio, and run the UI there
+The UI has been working fine recently, but now all of a sudden a text box appears in RStudio asking you to install R packages. | An analyst accidentally adding R packages to the renv folder. Check to see if a large number of folders have been added to the `renv\library\R-4.0\x86_64-w64-mingw32` folder in the last couple of days. Sort the folders by clicking on the _Date modified_ column. If yes, then those folders (which contain R packages) have been accidentally added. | Delete the added folders to `renv\library\R-4.0\x86_64-w64-mingw32` and restart R

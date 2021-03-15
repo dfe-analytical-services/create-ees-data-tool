@@ -371,6 +371,7 @@ pre code {
 <li><a href="#tag6">Summary</a></li>
 <li><a href="#tag7">Detailed Explanation</a></li>
 </ol></li>
+<li><a href="#tag8">Common Problems</a></li>
 </ol>
 </div>
 </div>
@@ -532,6 +533,36 @@ pre code {
 <p>And finally, <em>Download your query</em> allows you to download the same query as a text file called <code>&lt;current-data-YYYY-MM-DD&gt;_query.txt</code></p>
 </div>
 </div>
+</div>
+<div id="common-problems" class="section level1">
+<h1>Common Problems <a class="anchor" id="tag8"></a></h1>
+<p>Whilst deploying the UI to the DISD FE unit, these problems arose intermittently. Both of them were due to incorrect usage of R projects and the saved packages in the <code>renv</code> folder:</p>
+<table>
+<colgroup>
+<col width="38%"></col>
+<col width="30%"></col>
+<col width="30%"></col>
+</colgroup>
+<thead>
+<tr class="header">
+<th>Error</th>
+<th>Cause</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A text box appears in RStudio asking you to install R packages. E.g. <em>Running Flexdashboard requires installation of updated versions of these packages. Do you want to install now?</em></td>
+<td>Not using the <code>user-interface.Rproj</code> R project to run the UI</td>
+<td>Open the <code>user-interface.Rproj</code> R project in RStudio, and run the UI there</td>
+</tr>
+<tr class="even">
+<td>The UI has been working fine recently, but now all of a sudden a text box appears in RStudio asking you to install R packages.</td>
+<td>An analyst accidentally adding R packages to the renv folder. Check to see if a large number of folders have been added to the <code>renv\library\R-4.0\x86_64-w64-mingw32</code> folder in the last couple of days. Sort the folders by clicking on the <em>Date modified</em> column. If yes, then those folders (which contain R packages) have been accidentally added.</td>
+<td>Delete the added folders to <code>renv\library\R-4.0\x86_64-w64-mingw32</code> and restart R</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="footnotes">
 <hr />
