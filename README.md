@@ -72,11 +72,12 @@ To run the UI, follow these steps:
 5. **Do not update R Packages after you've opened the R project**.
 6. If you can, use `R version 4.0.3 (2020-10-10)` or later. I built and tested the UI in this version. If you're on the ESFA Remote Desktop, download the latest version of R [here.](https://cran.r-project.org/bin/windows/base/) After it downloads, install it by double-clicking on the `R-4.0.3-win` file in your _Downloads_ folder. If you're on the DfE Network, download the latest version of R from the _Software Centre_^[and pray]
 7. Open `user-interface.Rmd` in RStudio.
-8. Click on *Run Document* at the top of that file, or press `Ctrl + Shift + K`
-9. The UI will either appear in the *Viewer* pane on the bottom right-hand side of RStudio, or as a separate window.
-10. Make sure your browser's default is not set to Internet Explorer. The UI will look awful if opened in Internet Explorer.
-11. In the *Viewer* pane, click the *Arrow and Box* button to open the UI in your browser. If the UI opened in a separate window, click the *Open in Browser* button. You need to open the UI in your browser to download the data and metadata files. 
-12. The UI will appear as a page in your internet browser. In sequential order, select the data you want to return:
+8. Uncomment lines 33 to 34, and add in the SQL server and database your SQL tables are saved in.
+9. Click on *Run Document* at the top of that file, or press `Ctrl + Shift + K`
+10. The UI will either appear in the *Viewer* pane on the bottom right-hand side of RStudio, or as a separate window.
+11. Make sure your browser's default is not set to Internet Explorer. The UI will look awful if opened in Internet Explorer.
+12. In the *Viewer* pane, click the *Arrow and Box* button to open the UI in your browser. If the UI opened in a separate window, click the *Open in Browser* button. You need to open the UI in your browser to download the data and metadata files. 
+13. The UI will appear as a page in your internet browser. In sequential order, select the data you want to return:
     
     1. First, select the _SQL Table (ST)_ you want to return from in the _SQL Table_ drop down menu. 
     
@@ -102,14 +103,14 @@ To run the UI, follow these steps:
     
     12. Clarify the Rounding you want performed on the Tidy data by selecting it in the _Rounding?_ menu. The default is set to None. 
 
- 13. Once you've selected all those parameters, click `Run your query`. A progress bar will appear in the bottom right of the screen. Wait until it finishes.
- 14. When you clicked `Run your query`, your selections were passed to a SQL query, which started to run.  
- 15. Once the progress bar is finished, `Tidy Data` will appear in the _Explore your data_ pane. Explore it here. 
- 16. This data can be downloaded as a csv in the _Download your tidy data_ pane.
- 17. The Metadata file you need for EES can be downloaded in the _Download your Metadata File_ pane. The names, column types, and labels for the filters and labels you select will automatically generate. But, the _indicator_grouping, indicator_dp, filter_hint_, and _filter_grouping_column_ columns will not be generated. _If they need completed, you need to fill them in yourself._ For more information about what should go in these columns, open a browser on the DfE network and go to [the Explore Education Statistics guidance.](https://rsconnect/rsc/stats-production-guidance/ud.html#mandatory_ees_metadata_columns)
- 18. The raw data - `Non-Tidy Data` - the SQL query returns can be downloaded as a csv in the _Download your non-tidy data_ pane. This can be used for PowerBI dashboards and underlying datasets
- 19. The raw query that returns this data can be copied and pasted in the _View your query_ pane.
- 20. Whilst this same query can be downloaded as a text file in the _Download your query_ pane.
+ 14. Once you've selected all those parameters, click `Run your query`. A progress bar will appear in the bottom right of the screen. Wait until it finishes.
+ 15. When you clicked `Run your query`, your selections were passed to a SQL query, which started to run.  
+ 16. Once the progress bar is finished, `Tidy Data` will appear in the _Explore your data_ pane. Explore it here. 
+ 17. This data can be downloaded as a csv in the _Download your tidy data_ pane.
+ 18. The Metadata file you need for EES can be downloaded in the _Download your Metadata File_ pane. The names, column types, and labels for the filters and labels you select will automatically generate. But, the _indicator_grouping, indicator_dp, filter_hint_, and _filter_grouping_column_ columns will not be generated. _If they need completed, you need to fill them in yourself._ For more information about what should go in these columns, open a browser on the DfE network and go to [the Explore Education Statistics guidance.](https://rsconnect/rsc/stats-production-guidance/ud.html#mandatory_ees_metadata_columns)
+ 19. The raw data - `Non-Tidy Data` - the SQL query returns can be downloaded as a csv in the _Download your non-tidy data_ pane. This can be used for PowerBI dashboards and underlying datasets
+ 20. The raw query that returns this data can be copied and pasted in the _View your query_ pane.
+ 21. Whilst this same query can be downloaded as a text file in the _Download your query_ pane.
  
 # How to maintain the UI <a class="anchor" id = "tag4"></a>
 
