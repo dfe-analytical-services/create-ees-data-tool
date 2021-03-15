@@ -28,24 +28,24 @@ This project makes a User Interface (UI) for use by teams in Data Insights and S
 4. Decide where to save the code using the `Browse..` button, and click `Create Project`. The code will download from Github to the folder location you gave in _Browse..._
 5. After the code has downloaded, look in the bottem left _Console_ pane of RStudio where you will see this message:
 
-> ### Bootstrapping renv 0.12.5 --------------------------------------------------
-* Downloading renv 0.12.5 from CRAN archive ... OK
-* Installing renv 0.12.5 ... Done!
-* Successfully installed and loaded renv 0.12.5.
-* Project '~/create-ees-data-tool' loaded. [renv 0.12.5]
-* The project library is out of sync with the lockfile.
-* Use `renv::restore()` to install packages recorded in the lockfile.
+> Bootstrapping renv 0.12.5 --------------------------------------------------
+Downloading renv 0.12.5 from CRAN archive ... OK
+Installing renv 0.12.5 ... Done!
+Successfully installed and loaded renv 0.12.5.
+Project '~/create-ees-data-tool' loaded. [renv 0.12.5]
+The project library is out of sync with the lockfile.
+Use `renv::restore()` to install packages recorded in the lockfile.
 
 6. This means that you have to install R packages to the `renv` folder so that the UI can run. To do that, type `renv::restore` in the console and click enter on your keyboard.
 7. You will see this message appear:
 
 > The following package(s) will be updated:
 CRAN =========
- - BH              [* -> 1.75.0-0]
- - DBI             [* -> 1.1.1]
-  ....
-  ....
- Do you want to proceed? [y/N]:
+> - BH              [* -> 1.75.0-0]
+> - DBI             [* -> 1.1.1]
+>  ....
+>  ....
+> Do you want to proceed? [y/N]:
 
 8. Type _y_ and click enter
 9. After the code has finished downloading and installing the packages, reopen the `user-interface.Rmd` file and run it. If you don't know how to run it, read the section below.
