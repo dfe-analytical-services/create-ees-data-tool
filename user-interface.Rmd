@@ -1,5 +1,5 @@
 ---
-title: "Explore Education Sttistics User Interface"
+title: "Explore Education Statistics User Interface"
 author: "David Sands"
 output: 
   flexdashboard::flex_dashboard:
