@@ -30,8 +30,8 @@ sub_tot_var <- filters %>% distinct(sub_total_filter) # Import filters names wit
 sub_tot_ind <- indicators %>% distinct(sub_total_indicator) # Import indicator names without the "ST." prefix
 
 # Connect to SQL ----
-conn1 <- DBI::dbConnect(odbc(), .connection_string =  'driver={SQL Server};  server=<name-of-server>;
-database=<name-of-database>; trusted_connection=true') # Connect to SQL server
+#conn1 <- DBI::dbConnect(odbc(), .connection_string =  'driver={SQL Server};  server=<name-of-server>;
+#database=<name-of-database>; trusted_connection=true') # Connect to SQL server
 ```
 
 Explore Education Statistics User Interface

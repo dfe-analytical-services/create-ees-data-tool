@@ -4,11 +4,12 @@
 
 ## Contents
 1. [Introduction](#tag1)
-2. [How to run the UI](#tag2)
-3. [How to maintain the UI](#tag3)
-4. [How does the UI work?](#tag4)
-    1. [Summary](#tag5)
-    2. [Detailed Explanation](#tag6)
+2. [How to download and install this code](#tag2)
+2. [How to run the UI](#tag3)
+3. [How to maintain the UI](#tag4)
+4. [How does the UI work?](#tag5)
+    1. [Summary](#tag6)
+    2. [Detailed Explanation](#tag7)
     
 # Introduction <a class="anchor" id = "tag1"></a>
     
@@ -17,8 +18,39 @@ This project makes a User Interface (UI) for use by teams in Data Insights and S
  * An Explore Education Statistics Import File (EESIF); 
  * A PowerBI dashboard (PBI); or,
  * Ad-hoc analysis
+ 
+# How to download and install this code <a class="anchor" id = "tag2"></a>
+
+1. On the [Github page](https://github.com/dfe-analytical-services/create-ees-data-tool), you will see a green box near the top called `Code`. Click it, and look underneath the underlined _HTTPS_ text. There is a url there starting with _https://_. Copy that url.
+2. Open RStudio on your computer. In the top right of the screen, click on `Project (None)`. In the menu that appears, click on `New Project...`
+3. In the next menu, click on the third option `Version Control`. Then `Git`. You will see a menu called _Clone Git Repository_. In the `Repository URL:` cell, paste the url you copied from Github
+4. Decide where to save the code using the `Browse..` button, and click `Create Project`. The code will download from Github to the folder location you gave in _Browse..._
+5. After the code has downloaded, look in the bottem left _Console_ pane of RStudio where you will see this message:
+
+> ### Bootstrapping renv 0.12.5 --------------------------------------------------
+* Downloading renv 0.12.5 from CRAN archive ... OK
+* Installing renv 0.12.5 ... Done!
+* Successfully installed and loaded renv 0.12.5.
+* Project '~/create-ees-data-tool' loaded. [renv 0.12.5]
+* The project library is out of sync with the lockfile.
+* Use `renv::restore()` to install packages recorded in the lockfile.
+
+6. This means that you have to install R packages to the `renv` folder so that the UI can run. To do that, type `renv::restore` in the console and click enter on your keyboard.
+7. You will see this message appear:
+
+> The following package(s) will be updated:
+CRAN =========
+ - BH              [* -> 1.75.0-0]
+ - DBI             [* -> 1.1.1]
+  ....
+  ....
+ Do you want to proceed? [y/N]:
+
+8. Type _y_ and click enter
+9. After the code has finished downloading and installing the packages, reopen the `user-interface.Rmd` file and run it. If you don't know how to run it, read the section below.
+
     
-# How to run the UI <a class="anchor" id = "tag2"></a>
+# How to run the UI <a class="anchor" id = "tag3"></a>
 
 To run the UI, follow these steps:
 
@@ -65,7 +97,7 @@ To run the UI, follow these steps:
  16. The raw query that returns this data can be copied and pasted in the _View your query_ pane.
  17. Whilst this same query can be downloaded as a text file in the _Download your query_ pane.
  
-# How to maintain the UI <a class="anchor" id = "tag3"></a>
+# How to maintain the UI <a class="anchor" id = "tag4"></a>
 
 Update the UI by checking the below requirements:
 
@@ -73,15 +105,15 @@ Update the UI by checking the below requirements:
   2. If the SQL Tables move location on the SQL server, updating the SQL connection to refer to the new location. This is found in the `{r setup, include=FALSE}` code chunk of the UI R Markdown
   3. Adding the latest academic years to the Year selections. These are found in the `### Year` section of the UI R Markdown.
   
-# How does the UI work? <a class="anchor" id = "tag4"></a>
+# How does the UI work? <a class="anchor" id = "tag5"></a>
 
-## Summary <a class="anchor" id = "tag5"></a>
+## Summary <a class="anchor" id = "tag6"></a>
 
 The UI imports information from the `inputs\filters-and-indicators.xlsx` Excel file containing the names of SQL tables, as well as filters & indicators from those tables. It sends that information to various drop-down menus which the user selects from. These selections populate a SQL query. When the user is finished and clicks a `Run` button, this SQL query is run, returning what the UI calls _non-tidy data_. Additional operations are applied to this non-tidy data to make it tidy - like sub-totaling all filter groups and adding the extra four columns required by EES. 
 
 At the end, the UI returns _tidy data_ for use in EES, _non-tidy data_ for PBI dashboards, underlying files and ad-hoc queries, and a corresponding _meta data file_ for EES.  
   
-## Detailed Explanation <a class="anchor" id = "tag6"></a>
+## Detailed Explanation <a class="anchor" id = "tag7"></a>
 
 This UI is a Flexdashboard - an R Markdown dashboard - written in the _user-interface.Rmd_ file. It connects to the `inputs\filters-and-indicators.xlsx` Excel file and a SQL server you specify, asks the user for selections, sends those selections to a SQL query, runs it, manipulates the returned data, and outputs both tidy and non-tidy data. 
 
