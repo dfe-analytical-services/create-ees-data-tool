@@ -26,7 +26,7 @@ This project makes a User Interface (UI) for use by teams in Data Insights and S
 2. Open RStudio on your computer. In the top right of the screen, click on `Project (None)`. In the menu that appears, click on `New Project...`
 3. In the next menu, click on the third option `Version Control`. Then `Git`. You will see a menu called _Clone Git Repository_. In the `Repository URL:` cell, paste the url you copied from Github
 4. Decide where to save the code using the `Browse..` button, and click `Create Project`. The code will download from Github to the folder location you gave in _Browse..._
-5. After the code has downloaded, look in the bottem left _Console_ pane of RStudio where you will see this message:
+5. After the code has downloaded, look in the bottom left _Console_ pane of RStudio where you will see this message:
 
 > Bootstrapping renv 0.12.5 --------------------------------------------------
 Downloading renv 0.12.5 from CRAN archive ... OK
@@ -64,7 +64,7 @@ To run the UI, follow these steps:
     6. The label you want for your filters in the metadata file
 2. Go to the _indicators_ sheet. Like filters, this information is also used in the SQL queries the UI runs. Using the dummy examples in that sheet, enter the:
     1. Indicators - the names of the measure you report on from your SQL Table. Should always be in the SQL format of an aggregate variable (sum or count).
-    2. Their sub-total names needed by the UI.  I.e. if you have an indiactor like `sum(ST.indicator_1) as indicator_1`, you would enter the string `indicator_1` here
+    2. Their sub-total names needed by the UI.  I.e. if you have an indicator like `sum(ST.indicator_1) as indicator_1`, you would enter the string `indicator_1` here
     3. The name of the SQL table this filter comes from, given the alias `ST`
     4. The label you want for your indicators in the metadata file
 3. Save the file and close it.
